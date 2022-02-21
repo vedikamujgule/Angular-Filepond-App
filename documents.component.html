@@ -1,0 +1,423 @@
+<style>
+    .custom-modal>.modal-lg {
+        width: auto !important;
+        max-width: 1200px !important;
+    }
+</style>
+<div class="loader" *ngIf="showLoader">
+    <div class="icon-container">
+        <i class="fa fa-circle-o-notch fa-spin text-white"></i>
+        <p>Please wait...</p>
+    </div>
+</div>
+<header class="folder-directory-header">
+    <div class="btn-group color-blue">
+        <a *ngIf="pathStack.length>0" (click)="moveBack()" class="mr-1 backword-btn cursor-pointer" aria-label="Previous" data-toggle="tooltip" title="previous" aria-label="previous">
+            <i class="material-icons">chevron_left</i>
+        </a>
+        <a (click)="refreshDirectory()" class="backword-btn mr-1 cursor-pointer" data-toggle="tooltip" title="refresh" aria-label="Refresh">
+            <i class="material-icons cursor-pointer">refresh</i>
+        </a>
+        <a *ngIf="isShared" (click)="resendEmailVerify()" class="backword-btn mr-1 cursor-pointer" data-toggle="tooltip" title="email" aria-label="Email">
+            <i class="material-icons cursor-pointer">email</i>
+        </a>
+
+        <a class="backword-btn mr-1 cursor-pointer" data-toggle="tooltip" title="grid view" aria-label="Grid View" (click)="activeMenu('file')">
+            <i class="material-icons cursor-pointer">apps</i>
+        </a>
+
+
+        <a class="backword-btn mr-1 cursor-pointer" data-toggle="tooltip" title="list view" aria-label="List View" (click)="activeMenu('list')">
+            <i class="material-icons cursor-pointer">view_list</i>
+        </a>
+
+        <button *ngIf="showUpload" type="button" class="cursor-pointer backword-btn" data-toggle="modal" data-target="#myModal">
+      <i class="material-icons" data-toggle="tooltip" title="Upload Template">cloud_upload</i>
+    </button>
+    </div>
+
+
+    <h6 class="text-center m-0 font-weight-normal">{{ 'key6' | translate }}</h6>
+    <div>
+        <a class="backword-btn  cursor-pointer gdpr-doc-search" [ngClass]=" searchEve ? 'noActive' : 'active'">
+            <i class="material-icons cursor-pointer search-icon" (click)="searchEve = !searchEve">search</i>
+            <fieldset class="gdpr-search-box">
+                <span class="material-icons gdpr-search-close-event" (click)="searchEve = !searchEve">close</span>
+                <input #searchParam type="text" placeholder="Search.." (keyup.enter)="search(searchParam.value)">
+            </fieldset>
+        </a>
+    </div>
+</header>
+
+<!-----list and grid view------------>
+<main class="container-fluid gdpr-dataTableHead">
+    <div style="padding: 13px 0px 0px 0px;" *ngIf="pathStack.length > 0">
+        <a class="pathlink" (click)="openFolderWithIndex(0)">ROOT</a>
+        <ng-container *ngFor="let prop of pathStack;let i = index">
+            &gt; <a class="pathlink" (click)="openFolderWithIndex(i+1)">{{prop}}</a>
+        </ng-container>
+    </div>
+    <section id="file-directory" *ngIf="view == 'list'">
+        <div class="row">
+            <div class="col-12">
+                <div class="table-responsive gdpr-table">
+                    <table class="table-striped table">
+                        <thead>
+                            <tr>
+                                <th>{{ 'key1' | translate }}</th>
+                                <th>{{ 'key4' | translate }}</th>
+                                <th>{{ 'key70' | translate }}</th>
+                                <th>{{ 'key5' | translate }}</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <thead class="thead-dark">
+                            <tr *ngIf="documentDataReplica.length==0">
+                                <th colspan="5" class="text-center">No Data to Display</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let directory of documentDataReplica">
+                                <td *ngIf="directory.isFile && directory.userRole!='SYSTEM_USER' && view == 'list'" tooltip="{{directory.fileParameter}}" [options]="myOptions" class="cursor-pointer" (click)="viewFileByFileName(directory.name,directory.fullPath)">
+                                    <i class="fa-lg fa fa-file color-red"></i> {{directory.name}}
+                                </td>
+                                <td *ngIf="directory.isFile && directory.userRole =='SYSTEM_USER' && view == 'list'" class="cursor-pointer" (click)="viewFileByFileName(directory.name,directory.fullPath)">
+                                    <i class="color-red"></i> {{directory.name}}
+                                </td>
+                                <td *ngIf="directory.isFile && view == 'list'">{{directory.uploadTime | datex:'MMM D, Y, h:mm:ss a' }}
+                                </td>
+                                <td *ngIf="directory.isFile && view == 'list'">{{directory.size}}</td>
+                                <td *ngIf="directory.isFile && view == 'list'" class="text-center">
+                                    <i class="fa fa-download fa-lg color-green cursor-pointer" data-toggle="tooltip" title="Download" (click)="downloadFile(directory.fullPath)"></i>
+                                    <i *ngIf="directory.isTemplate" class="fa fa-trash mr-2 fa-lg color-red cursor-pointer" data-toggle="tooltip" title="Delete" (click)="rowToDelete(directory.blobName,directory.templateId)" data-toggle="modal" data-target="#deleteModal"></i>
+                                </td>
+
+                                <!-- edit -->
+                                <td *ngIf="directory.isFile && !directory.isTemplate && directory.userRole!='SYSTEM_USER' && view == 'list'">
+                                    <button type="button" class="gdpr-table-action-btn btn-blue" data-toggle="modal" data-target="#exampleModal" (click)="edit(directory.fileParameters)">
+                    <i class="material-icons">edit</i>
+                  </button>
+                                    <i class="fa fa-trash mr-2 color-red cursor-pointer" data-toggle="tooltip" title="Delete" (click)="rowToDeletee(directory.fileParameters)" data-toggle="modal" data-target="#deleteModalForFiles"></i>
+
+                                </td>
+                                <td *ngIf="directory.isFile && !directory.isTemplate && directory.userRole=='SYSTEM_USER' && view == 'list'">
+
+                                </td>
+                                <!-- <td *ngIf="directory.isFile && directory.userRole!='SYSTEM_USER'"></td> -->
+                                <td *ngIf="directory.isTemplate" class="text-center"></td>
+                                <!-- edit -->
+
+                                <td *ngIf="!directory.isFile" class=" cursor-pointer" (click)="!directory.isFile && openFolder(directory.name, true)"><i class="fa fa-folder"></i> {{directory.name}}
+                                </td>
+                                <td *ngIf="!directory.isFile">{{directory.uploadTime}}</td>
+                                <td *ngIf="!directory.isFile" class="text-center"></td>
+                                <td *ngIf="!directory.isFile" class="text-center"></td>
+                                <td *ngIf="!directory.isFile" class="text-center"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+    <section id="file-directory" class="ifr-grid ifr-sec" *ngIf="view == 'file'">
+        <div id="lightgallery" class="ifr-light-gallery">
+
+
+            <!-- <div class="row">
+        <div class="col-12">
+          <h6>Folder</h6>
+        </div>
+      </div> -->
+
+
+            <div class="row">
+                <ng-container *ngFor="let item of uiItems">
+                    <div class="col-12 col-lg-4" *ngIf="!item.isFile">
+                        <div class="gdpr-folder" (click)="!item.isFile && openFolder(item.name, true)"><i class="fa fa-folder"></i> {{item.name}}
+                        </div>
+                    </div>
+                </ng-container>
+            </div>
+
+            <!-- <div class="row">
+        <div class="col-12">
+          <h6>Quick Access</h6>
+        </div>
+      </div> -->
+
+            <div class="row">
+                <ng-container *ngFor="let item of uiItems">
+
+                    <ng-container *ngIf="item.isFile" [ngSwitch]="fetchExtension(item)">
+                        <ng-container *ngSwitchCase="'JPG'">
+                            <div class="col-12 col-lg-3 col-xl-3" tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                <div class="ifr-grid-item gal-item" [attr.data-src]="item.fullPath">
+                                    <img [src]="transform(item.fullPath)" class="ifr-img" />
+                                    <div class="ifr-file-titl">
+                                        <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">photo_size_select_actual</i> {{ getFormattedFileName(item.name, 10) }}
+                                    </div>
+                                </div>
+                            </div>
+
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'PNG'">
+                            <div class="col-12 col-xl-3" tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                <div class="ifr-grid-item gal-item" [attr.data-src]="item.fullPath">
+                                    <img [src]="transform(item.fullPath)" class="ifr-img" />
+                                    <div class="ifr-file-titl">
+                                        <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">photo_size_select_actual</i> {{ getFormattedFileName(item.name, 10) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'JPEG'">
+                            <div class="col-12 col-xl-3" tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                <div class="ifr-grid-item gal-item" [attr.data-src]="item.fullPath">
+                                    <img [src]="transform(item.fullPath)" class="ifr-img" />
+                                    <div class="ifr-file-titl">
+                                        <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">photo_size_select_actual</i> {{ getFormattedFileName(item.name, 10) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'PDF'">
+                            <div class="col-12 col-xl-3">
+                                <a tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                    <div class="ifr-grid-item gal-item" data-iframe="true" [id]="item.name" [attr.data-src]="transform(item.fullPath)">
+                                        <iframe name="plugin" [src]="transform(item.fullPath)" type="application/pdf" width="100%"></iframe>
+                                        <div class="ifr-file-titl">
+                                            <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">picture_as_pdf</i> {{ item.name }}
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'DOC'">
+                            <div class="col-12 col-xl-3">
+                                <a [href]="item.imgSrc" tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                    <div class="ifr-grid-item gal-item" data-iframe="true" [id]="item.name" [attr.data-src]="
+                            item.fullPath.changingThisBreaksApplicationSecurity
+                          ">
+                                        <iframe class="" name="plugin" [src]="item.fullPath" type="application/pdf" width="100%" scrolling="no" style="overflow: hidden;"></iframe>
+                                        <div class="ifr-file-titl">
+                                            <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">picture_as_pdf</i> {{ item.name }}
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'DOCS'">
+                            <div class="col-12 col-xl-3">
+                                <a [href]="item.imgSrc" tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                    <div class="ifr-grid-item gal-item" data-iframe="true" [id]="item.name" [attr.data-src]="
+                            item.fullPath.changingThisBreaksApplicationSecurity
+                          ">
+                                        <iframe class="" name="plugin" [src]="item.fullPath" type="application/pdf" width="100%" scrolling="no" style="overflow: hidden;"></iframe>
+                                        <div class="ifr-file-titl">
+                                            <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">picture_as_pdf</i> {{ item.name }}
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'DOCX'">
+                            <div class="col-12 col-xl-3">
+                                <a [href]="item.imgSrc" tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                    <div class="ifr-grid-item gal-item" data-iframe="true" [id]="item.name" [attr.data-src]="
+                            item.fullPath.changingThisBreaksApplicationSecurity
+                          ">
+                                        <iframe class="" name="plugin" [src]="item.fullPath" type="application/pdf" width="100%" scrolling="no" style="overflow: hidden;"></iframe>
+                                        <div class="ifr-file-titl">
+                                            <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">picture_as_pdf</i> {{ item.name }}
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'CSV'">
+                            <div class="col-12 col-xl-3" tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                <div class="ifr-grid-item gal-item" data-iframe="true" [id]="item.name" [attr.data-src]="
+                          transform(
+                            'https://drive.google.com/viewerng/viewer?embedded=true&url=' +
+                              item.fullPath +
+                              '&toolbar=0&navpanes=0&scrollbar=0'
+                          )
+                        ">
+                                    <iframe [src]="
+                            transform(
+                              'https://view.officeapps.live.com/op/embed.aspx?embedded=true&src=' +
+                                item.fullPath
+                            )
+                          " scrolling="no" align="center" frameborder="no"></iframe>
+                                    <div class="ifr-file-titl">
+                                        <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">insert_drive_file</i> {{ getFormattedFileName(item.name, 10) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </ng-container>
+
+                        <ng-container *ngSwitchCase="'MP4'">
+                            <div id="abcd" class="col-12 col-xl-3" tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                <div class="ifr-grid-item">
+                                    <video class="lg-video-object lg-html5" preload="metadata" controls>
+                    <source [src]="item.fullPath" type="video/mp4" />
+                    Your browser does not support HTML5 video.
+                  </video>
+                                    <div class="ifr-file-titl">
+                                        <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">movie</i> {{ getFormattedFileName(item.name, 10) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </ng-container>
+
+                        <ng-container *ngSwitchDefault>
+                            <div class="col-12 col-xl-3" tooltip="{{ getToolTipContent(item) }}" [options]="myOptions">
+                                <div class="ifr-grid-item">
+                                    <div class="no-preview">
+                                        <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">refresh</i>
+                                    </div>
+                                    <div class="ifr-file-titl">
+                                        <i class="material-icons cursor-pointer isa-action-icon" aria-label="fileicon">refresh</i> {{ getFormattedFileName(item.name, 10) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </ng-container>
+                    </ng-container>
+                </ng-container>
+            </div>
+        </div>
+    </section>
+</main>
+
+<div class="modal fade gdpr-modal" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" #closebutton>
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Edit Parameters</h5>
+            </div>
+            <form name="form" (ngSubmit)="onSubmit(modelObject)" #f="ngForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input type="text" class="form-control gdpr-input" name="region" [(ngModel)]="modelObject.region" placeholder="Region">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control gdpr-input" name="country" [(ngModel)]="modelObject.country" placeholder="Country">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control gdpr-input" name="system" [(ngModel)]="modelObject.system" placeholder="System">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control gdpr-input" name="consumerId" [(ngModel)]="modelObject.consumerId" placeholder="Consumer Id">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control gdpr-input" name="transactionId" [(ngModel)]="modelObject.transactionId" placeholder="Transaction Id">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control gdpr-input" name="applianceid" [(ngModel)]="modelObject.applianceId" placeholder="Appliance Id">
+                    </div>
+
+                    <div class="form-group">
+                        <input type="text" class="form-control gdpr-input" name="attahmentType" [(ngModel)]="modelObject.attachmentType" placeholder="Attahment Type">
+                    </div>
+
+                    <div class="form-group">
+                        <input type="text" class="form-control gdpr-input" name="documentSource" [(ngModel)]="modelObject.documentSource" placeholder="Document Source">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="gdpr-btn gdpr-btn-gray" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="gdpr-btn gdpr-btn-blue">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- modal for edit parameters-->
+
+<!-- modal for view file-->
+<div id="viewFileModal" class="modal fade viewFileModal" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 id="pdfTitle" class="modal-title"></h6>
+                <button class="close py-1" data-dismiss="modal" type="button"><i class="material-icons">close</i></button>
+            </div>
+            <div class="modal-body">
+                <iframe id="embedPDF" src="" frameborder="0" width="100%" height="400px"></iframe>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="closeModal" class="gdpr-button" data-dismiss="modal">{{ 'key27' | translate }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- Modal for upload file -->
+<div id="myModal" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="margin-top: 200px;">
+            <div class="modal-header">
+                <h6 class="modal-title upload-title">{{ 'key45' | translate }}</h6>
+                <button class="close py-1" data-dismiss="modal" type="button"><i class="material-icons">close</i></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <input acept="image/*" class="type_file_field d-block" type="file" id="uploadBinaryFile" (change)="onFileChange($event)" #fileInput>
+                    </div>
+                    {{msg}}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="gdpr-icon-button gdpr-button gdpr-button-primary upload-button" (click)="uploadfile()">
+          <i class="material-icons">cloud_upload</i> {{ 'key48' | translate }}
+        </button>
+                <button type="button" id="closeModal" class="gdpr-button upload-close" data-dismiss="modal">{{ 'key27' | translate }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header px-3">
+                <h5 class="modal-title pull-left" id="exampleModalLabel">{{ 'key28' | translate }}</h5>
+            </div>
+            <div class="modal-body">
+                {{ 'key29' | translate }}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" (click)="rowToDelete(null)">{{ 'key21' | translate }}</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" (click)="deleteFile()">{{ 'key22' | translate }}</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="deleteModalForFiles" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" style="margin-top: 200px;">
+            <div class="modal-header px-3">
+                <h5 class="modal-title pull-left" id="exampleModalLabel">{{ 'key28' | translate }}</h5>
+            </div>
+            <div class="modal-body">
+                {{ 'key29' | translate }}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" (click)="rowToDeletee(null)">{{ 'key21' | translate }}</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" (click)="deleteFilee()">{{ 'key22' | translate }}</button>
+            </div>
+        </div>
+    </div>
+</div>
